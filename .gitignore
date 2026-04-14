@@ -1,0 +1,10 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Large data files — regenerate locally with generate_large_file.py
+data/large_words_file.txt
+
+# macOS
+.DS_Store
