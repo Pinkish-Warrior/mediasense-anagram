@@ -106,3 +106,8 @@ with open('large_words_file.txt', 'w') as f:
 ```bash
 python3 generate_large_file.py
 ```
+
+---
+
+![Human Led AI Enhanced](https://img.shields.io/badge/Human%20Led-AI%20Enhanced%20with%20Claude%20Sonnet%204.6-D97757?logo=anthropic&logoColor=white)
+
