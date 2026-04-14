@@ -8,7 +8,7 @@ Groups words from a file by their anagram signature. Three implementations are a
 
 | File | Description |
 |---|---|
-| `group_anagrams.py` | Naive approach — dictionary in RAM |
+| `group_anagrams.py` | Naive approach — dictionary in RAM, structured as pure logic with no I/O side effects so it can slot directly into a FastAPI endpoint |
 | `anagram_scalability.py` | Scaled approach — sort all pairs in RAM |
 | `anagram_external_sort.py` | External approach — delegates sorting to Unix `sort` |
 | `smart_anagram.py` | Smart dispatcher — picks the right approach automatically |
