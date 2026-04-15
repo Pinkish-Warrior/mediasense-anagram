@@ -1,6 +1,7 @@
 import sys
 import os
 from collections import defaultdict
+from signature import make_signature
 
 
 def group_anagrams(file_path: str) -> list[list[str]]:
@@ -17,11 +18,11 @@ def group_anagrams(file_path: str) -> list[list[str]]:
 
     groups = defaultdict(list)
 
-    with open(file_path, "r") as f:
+    with open(file_path, "r", encoding="utf-8") as f:
         for line in f:
             word = line.strip()
             if word:
-                key = "".join(sorted(word.lower()))
+                key = make_signature(word)
                 groups[key].append(word)
 
     if not groups:
