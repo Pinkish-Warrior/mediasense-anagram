@@ -1,5 +1,6 @@
 import os
 import sys
+import platform
 import subprocess
 import tracemalloc
 import time
@@ -22,8 +23,6 @@ def get_available_ram() -> int:
     detection fails, logs a warning and returns a safe fixed fallback so the
     dispatcher can still make a decision without crashing.
     """
-    import platform
-
     if platform.system() != "Darwin":
         print(
             f"  WARNING: RAM detection is macOS-only. "
