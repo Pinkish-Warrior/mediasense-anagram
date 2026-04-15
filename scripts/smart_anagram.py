@@ -63,9 +63,10 @@ def run_with_stats(label, fn, file_path):
     import io
     tracemalloc.start()
     start = time.time()
-    sys.stdout = io.StringIO()
+    captured = io.StringIO()
+    sys.stdout = captured
     try:
-        fn(file_path)
+        result = fn(file_path)
     finally:
         sys.stdout = sys.__stdout__
     elapsed = time.time() - start
@@ -74,6 +75,7 @@ def run_with_stats(label, fn, file_path):
     print(f"  Approach : {label}")
     print(f"  Peak RAM : {format_bytes(peak)}")
     print(f"  Time     : {elapsed:.2f}s")
+    return result, captured.getvalue()
 
 
 def group_anagrams_smart(file_path):
@@ -91,16 +93,17 @@ def group_anagrams_smart(file_path):
     if file_size < threshold_bytes:
         print(f"  Decision : Naive (dict)")
         print("-" * 40)
+        captured = ""
         try:
-            run_with_stats("Naive (dict)", naive, file_path)
+            result, _ = run_with_stats("Naive (dict)", naive, file_path)
         except MemoryError:
             print("  ERROR: Out of memory. Falling back to Unix sort.")
-            run_with_stats("External (Unix sort) [fallback]", external, file_path)
+            result, captured = run_with_stats("External (Unix sort) [fallback]", external, file_path)
     else:
         print(f"  Decision : External (Unix sort)")
         print("-" * 40)
         try:
-            run_with_stats("External (Unix sort)", external, file_path)
+            result, captured = run_with_stats("External (Unix sort)", external, file_path)
         except subprocess.CalledProcessError as e:
             print(f"  ERROR: Unix sort failed (exit code {e.returncode}). Cannot recover.")
             sys.exit(1)
@@ -109,6 +112,13 @@ def group_anagrams_smart(file_path):
             sys.exit(1)
 
     print("=" * 40)
+    print("\n  Results:")
+    print("-" * 40)
+    if result is not None:
+        for group in result:
+            print(" ".join(group))
+    elif captured.strip():
+        print(captured.strip())
 
 
 if __name__ == "__main__":

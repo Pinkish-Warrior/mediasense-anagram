@@ -50,7 +50,7 @@ def test_fallback_when_sysctl_fails(capsys):
 def test_selects_naive_for_small_file(tmp_word_file, capsys):
     path = tmp_word_file(["eat", "tea", "tan"])
     with patch("smart_anagram.get_available_ram", return_value=_LARGE_RAM):
-        with patch("smart_anagram.run_with_stats") as mock_run:
+        with patch("smart_anagram.run_with_stats", return_value=(None, "")) as mock_run:
             group_anagrams_smart(path)
             label = mock_run.call_args[0][0]
     assert "Naive" in label
@@ -59,14 +59,14 @@ def test_selects_naive_for_small_file(tmp_word_file, capsys):
 def test_selects_external_for_large_file(tmp_word_file, capsys):
     path = tmp_word_file(["eat", "tea", "tan"])
     with patch("smart_anagram.get_available_ram", return_value=_SMALL_RAM):
-        with patch("smart_anagram.run_with_stats") as mock_run:
+        with patch("smart_anagram.run_with_stats", return_value=(None, "")) as mock_run:
             group_anagrams_smart(path)
             label = mock_run.call_args[0][0]
     assert "External" in label
 
 
 def test_memory_error_triggers_fallback(tmp_word_file, capsys):
-    """When the scaled approach raises MemoryError, external must be used."""
+    """When the naive approach raises MemoryError, external must be used."""
     path = tmp_word_file(["eat", "tea"])
     calls = []
 
@@ -74,6 +74,7 @@ def test_memory_error_triggers_fallback(tmp_word_file, capsys):
         calls.append(label)
         if "Naive" in label:
             raise MemoryError
+        return None, ""
 
     with patch("smart_anagram.get_available_ram", return_value=_LARGE_RAM):
         with patch("smart_anagram.run_with_stats", side_effect=fake_run):
