@@ -1,7 +1,7 @@
 # Conclusion: Post-Audit Assessment and Recommendations
 
 **Project:** mediasense-anagram  
-**Basis:** AUDIT.md → ACTION.MD → POST_AUDIT_PLAN.md → Phases 1, 2 and 3  
+**Basis:** AUDIT.md → ACTION.md → POST_AUDIT_PLAN.md → Phases 1, 2 and 3  
 **Date:** April 15, 2026
 
 ---
@@ -62,34 +62,24 @@ Do you know the file will fit comfortably in RAM?
 
 ## 3. The Smart Dispatcher — Honest Assessment
 
-`smart_anagram.py` is the right default for a general CLI user, but it has
-one gap worth understanding: it dispatches between `anagram_scalability.py`
-and `anagram_external_sort.py`. It never routes to `group_anagrams.py` (naive),
-which is actually the more memory-efficient choice for files that fit in RAM.
-
-As the audit established, `anagram_scalability.py` materialises all
-`(signature, word)` pairs as tuples in memory before sorting — adding
-overhead on top of what a simple dictionary already needs. At 30 million words,
-naive used 4,412 MB and scaled used 5,451 MB. Scaled is worse.
-
-The current dispatch logic:
+`smart_anagram.py` is the right default for a general CLI user. The dispatch
+logic is now internally consistent with the benchmarked results:
 
 ```
-file < 15% RAM  →  scaled    ← not the optimal in-memory choice
-file ≥ 15% RAM  →  external  ← correct
+file < 15% RAM  →  naive     ← lowest memory for in-memory work  ✓
+file ≥ 15% RAM  →  external  ← correct                           ✓
 ```
 
-The more accurate logic would be:
+An earlier version routed small files to `anagram_scalability.py` instead of
+`group_anagrams.py`. That bug has been fixed — the dispatcher now routes
+correctly at every file size.
 
-```
-file < 15% RAM  →  naive     ← lowest memory for in-memory work
-file ≥ 15% RAM  →  external  ← correct
-```
-
-This is not a blocker — the dispatcher still makes the right call on large
-files, which is where it matters most. But it is worth knowing that for small
-files the dispatcher routes to a less efficient implementation than running
-`group_anagrams.py` directly.
+**Performance note:** For very large files (e.g. 250 MB / 30 million words),
+the external sort path completes in approximately 6 minutes on a MacBook Air.
+The bottleneck is not RAM (Unix sort stays at ~275 MB throughout) but I/O —
+Python must compute a signature for every word and write it to the sort
+subprocess pipe. At 30 million words that is a significant amount of pipe
+throughput. This is a known characteristic of the approach, not a bug.
 
 ---
 
@@ -135,22 +125,25 @@ enhancement rather than a critical bug.
 
 ## 6. Recommendations
 
-### Immediate (before any further feature work)
+### Completed ✓
 
-- **Push Phase 1 and Phase 2 changes to `main`** — already committed ✓
-- **Merge the `feat/test-suite` PR** (Pinkish-Warrior/mediasense-anagram#1)
-  once reviewed — this is the gate to calling the project production ready
+- All critical bugs fixed (Phase 1)
+- Architectural refinements applied (Phase 2)
+- 47-test suite passing (Phase 3)
+- Dispatcher routing corrected — small files now route to naive dict
+- CI pipeline live — pytest and Snyk run on every push
+- `feat/test-suite` PR merged into `main`
 
 ### Short-term
 
-- **Fix the dispatcher's in-memory route.** Replace `anagram_scalability.py`
-  as the small-file target with `group_anagrams.py`. This makes the dispatcher
-  internally consistent with the benchmarked results and removes the only
-  production use case for `anagram_scalability.py`.
+- **Move `anagram_scalability.py` to `examples/`** to prevent accidental use
+  in production. It now has a pedagogical docstring but still lives alongside
+  the production scripts.
 
-- **Clarify `anagram_scalability.py` status.** Now that it has a pedagogical
-  docstring, consider whether it should remain in `scripts/` or move to a
-  separate `examples/` directory to prevent accidental use.
+- **Improve large-file throughput.** Writing 30 million lines to the sort
+  subprocess pipe one batch at a time is the current bottleneck (~6 min for
+  250 MB). A more efficient approach would pre-process signatures into a temp
+  file and call `sort` on it directly, reducing pipe overhead significantly.
 
 ### Longer-term
 
@@ -163,22 +156,31 @@ enhancement rather than a critical bug.
   start. The function signature, error handling, and return type are already
   service-ready. A thin FastAPI wrapper around it is a natural next step.
 
-- **CI pipeline.** Wire `pytest tests/` into a GitHub Actions workflow so the
-  47-test suite runs automatically on every push. This is the enforcement
-  mechanism that makes the "production ready" label durable.
+---
+
+## 7. A Note on the Large Test File
+
+`large_words_file.txt` (250 MB, 30 million words) was generated using random
+letter combinations — not real English words. This means almost every line
+produces a single-word group with no anagram match. It is useful exclusively
+for **memory and performance benchmarking**, not for demonstrating the anagram
+logic meaningfully.
+
+For correctness verification, `my_words_file.txt` (the 9-word sample from the
+task brief) is the right file. The large file only proves the solution does not
+crash at scale.
 
 ---
 
-## 7. Final Verdict
+## 8. Final Verdict
 
-The project is technically sound and the documentation is excellent. The audit
-findings were addressed faithfully and the test suite now provides a regression
-net across all three implementations.
+The project is technically sound. The audit findings were addressed faithfully,
+the dispatcher now routes correctly at every file size, and the 47-test suite
+provides a regression net across all implementations. CI runs on every push.
 
-The one honest caveat: the dispatcher routes small files to a less efficient
-approach than the naive implementation it was built on top of. Fixing that
-routing decision — a small change — would make the project internally
-consistent and fully defensible at every file size.
+The remaining open items — moving `anagram_scalability.py` to `examples/` and
+improving large-file pipe throughput — are enhancements, not correctness issues.
+The solution is production ready for its intended scope.
 
 See `docs/CONCLUSION.md` for the original narrative of how the three
 implementations evolved and what the large-scale benchmarks revealed.
