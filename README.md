@@ -2,6 +2,8 @@
 
 Groups words from a file by their anagram signature. Three implementations are available, plus a smart dispatcher that picks the right one automatically based on file size and available RAM.
 
+![CI](https://github.com/Pinkish-Warrior/mediasense-anagram/actions/workflows/ci.yml/badge.svg)
+
 ---
 
 ## Files
@@ -9,20 +11,24 @@ Groups words from a file by their anagram signature. Three implementations are a
 | File | Description |
 |---|---|
 | `group_anagrams.py` | Naive approach — dictionary in RAM, structured as pure logic with no I/O side effects so it can slot directly into a FastAPI endpoint |
-| `anagram_scalability.py` | Scaled approach — sort all pairs in RAM |
-| `anagram_external_sort.py` | External approach — delegates sorting to Unix `sort` |
-| `smart_anagram.py` | Smart dispatcher — picks the right approach automatically |
-| `compare_memory.py` | Memory benchmark — compares peak RAM across all three approaches |
+| `anagram_external_sort.py` | External approach — delegates sorting to Unix `sort`, memory-efficient for large files |
+| `smart_anagram.py` | Smart dispatcher — picks the right approach automatically based on file size vs available RAM |
+| `signature.py` | Shared utility — `make_signature()` extracted and imported by all grouping scripts |
+| `compare_memory.py` | Memory benchmark — compares peak RAM across approaches |
 | `prove_scaling.py` | Scaling proof — runs naive vs external sort across increasing word counts |
+| `anagram_scalability.py` | Learning artifact only — do not use in production (higher memory than naive) |
 
 ---
 
 ## Requirements
 
-No external dependencies. All scripts use Python 3 standard library only.
-
 - Python 3.10+
-- macOS (the smart dispatcher uses `sysctl` and `vm_stat` to read available RAM)
+- `pytest` (for running the test suite)
+- Works on macOS and Linux. On non-macOS systems the smart dispatcher uses a fixed 100 MB RAM threshold.
+
+```bash
+pip install -r requirements.txt
+```
 
 ---
 
@@ -44,9 +50,9 @@ Example output:
   Free RAM : 63.6 MB
   Threshold: 9.5 MB (15% of free RAM)
 ========================================
-  Decision : Scaled (sorted)
+  Decision : Naive (dict)
 ----------------------------------------
-  Approach : Scaled (sorted)
+  Approach : Naive (dict)
   Peak RAM : 139.1 KB
   Time     : 0.00s
 ========================================
@@ -56,13 +62,12 @@ Example output:
 
 ```bash
 python3 scripts/group_anagrams.py <file_path>
-python3 scripts/anagram_scalability.py <file_path>
 python3 scripts/anagram_external_sort.py <file_path>
 ```
 
 ### Memory benchmark
 
-Compares peak memory across all three approaches. Edit the `FILE` variable at the top of the script to choose which file to test:
+Compares peak memory across approaches. Edit the `FILE` variable at the top of the script to choose which file to test:
 
 ```bash
 python3 scripts/compare_memory.py
@@ -74,6 +79,16 @@ Runs naive vs external sort across increasing word counts (1K to 200K) to show h
 
 ```bash
 python3 scripts/prove_scaling.py
+```
+
+---
+
+## Tests
+
+47 tests across 6 modules covering correctness, edge cases, subprocess failure paths, cross-platform fallback, and memory benchmarks.
+
+```bash
+pytest tests/ -v
 ```
 
 ---
@@ -110,4 +125,3 @@ python3 generate_large_file.py
 ---
 
 ![Human Led AI Enhanced](https://img.shields.io/badge/Human%20Led-AI%20Enhanced%20with%20Claude%20Sonnet%204.6-D97757?logo=anthropic&logoColor=white)
-
