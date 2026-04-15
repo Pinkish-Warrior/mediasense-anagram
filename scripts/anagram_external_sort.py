@@ -1,9 +1,10 @@
 import sys
 import subprocess
 from itertools import groupby
+from signature import make_signature
 
 
-def group_anagrams(file_path):
+def group_anagrams(file_path: str) -> None:
     """Group anagrams using Unix sort — works on files larger than available memory.
 
     Unlike the naive approach (dictionary in RAM) or the sorted() approach (all pairs in RAM),
@@ -16,14 +17,16 @@ def group_anagrams(file_path):
         ["sort"],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
-        text=True
+        stderr=subprocess.PIPE,
+        text=True,
+        encoding="utf-8",
     )
 
-    with open(file_path, "r") as f:
+    with open(file_path, "r", encoding="utf-8") as f:
         for line in f:
             word = line.strip()
             if word:
-                signature = "".join(sorted(word.lower()))
+                signature = make_signature(word)
                 # write one line at a time — never holds more than one word in memory
                 sort_process.stdin.write(f"{signature}\t{word}\n")
 
@@ -33,6 +36,13 @@ def group_anagrams(file_path):
     for _, group in groupby(sort_process.stdout, key=lambda line: line.split("\t")[0]):
         words = [line.strip().split("\t")[1] for line in group]
         print(" ".join(words))
+
+    sort_process.wait(timeout=300)
+    if sort_process.returncode != 0:
+        raise RuntimeError(
+            f"sort failed (exit {sort_process.returncode}): "
+            f"{sort_process.stderr.read()}"
+        )
 
 
 def main():
