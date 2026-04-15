@@ -7,7 +7,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from anagram_scalability import group_anagrams as scaled
+from group_anagrams import group_anagrams as naive
 from anagram_external_sort import group_anagrams as external
 
 THRESHOLD = 0.15  # use Unix sort if file is > 15% of available RAM
@@ -89,10 +89,10 @@ def group_anagrams_smart(file_path):
     print("=" * 40)
 
     if file_size < threshold_bytes:
-        print(f"  Decision : Scaled (sorted)")
+        print(f"  Decision : Naive (dict)")
         print("-" * 40)
         try:
-            run_with_stats("Scaled (sorted)", scaled, file_path)
+            run_with_stats("Naive (dict)", naive, file_path)
         except MemoryError:
             print("  ERROR: Out of memory. Falling back to Unix sort.")
             run_with_stats("External (Unix sort) [fallback]", external, file_path)

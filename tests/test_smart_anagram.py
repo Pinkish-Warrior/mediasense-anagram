@@ -47,13 +47,13 @@ def test_fallback_when_sysctl_fails(capsys):
 # Dispatcher routing
 # ---------------------------------------------------------------------------
 
-def test_selects_scaled_for_small_file(tmp_word_file, capsys):
+def test_selects_naive_for_small_file(tmp_word_file, capsys):
     path = tmp_word_file(["eat", "tea", "tan"])
     with patch("smart_anagram.get_available_ram", return_value=_LARGE_RAM):
         with patch("smart_anagram.run_with_stats") as mock_run:
             group_anagrams_smart(path)
             label = mock_run.call_args[0][0]
-    assert "Scaled" in label
+    assert "Naive" in label
 
 
 def test_selects_external_for_large_file(tmp_word_file, capsys):
@@ -72,12 +72,12 @@ def test_memory_error_triggers_fallback(tmp_word_file, capsys):
 
     def fake_run(label, fn, fp):
         calls.append(label)
-        if "Scaled" in label:
+        if "Naive" in label:
             raise MemoryError
 
     with patch("smart_anagram.get_available_ram", return_value=_LARGE_RAM):
         with patch("smart_anagram.run_with_stats", side_effect=fake_run):
             group_anagrams_smart(path)
 
-    assert any("Scaled" in c for c in calls)
+    assert any("Naive" in c for c in calls)
     assert any("External" in c for c in calls)
