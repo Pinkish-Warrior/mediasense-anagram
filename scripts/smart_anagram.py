@@ -12,17 +12,43 @@ from anagram_external_sort import group_anagrams as external
 THRESHOLD = 0.15  # use Unix sort if file is > 15% of available RAM
 
 
-def get_available_ram():
-    """Return available RAM in bytes using macOS sysctl."""
-    page_size = int(subprocess.check_output(["sysctl", "-n", "hw.pagesize"]))
-    vm_stat = subprocess.check_output(["vm_stat"]).decode()
-    for line in vm_stat.splitlines():
-        if "Pages free" in line:
-            free_pages = int(line.split(":")[1].strip().rstrip("."))
-            return free_pages * page_size
-    # fallback: use 20% of total RAM
-    total = int(subprocess.check_output(["sysctl", "-n", "hw.memsize"]))
-    return int(total * 0.20)
+_FALLBACK_RAM_BYTES = 100 * 1024 * 1024  # 100 MB safe default for non-macOS systems
+
+
+def get_available_ram() -> int:
+    """Return available RAM in bytes.
+
+    Uses macOS-specific sysctl/vm_stat on Darwin. On any other platform, or if
+    detection fails, logs a warning and returns a safe fixed fallback so the
+    dispatcher can still make a decision without crashing.
+    """
+    import platform
+
+    if platform.system() != "Darwin":
+        print(
+            f"  WARNING: RAM detection is macOS-only. "
+            f"Using fixed threshold of {_FALLBACK_RAM_BYTES // (1024 ** 2)} MB.",
+            file=sys.stderr,
+        )
+        return _FALLBACK_RAM_BYTES
+
+    try:
+        page_size = int(subprocess.check_output(["sysctl", "-n", "hw.pagesize"]))
+        vm_stat = subprocess.check_output(["vm_stat"]).decode()
+        for line in vm_stat.splitlines():
+            if "Pages free" in line:
+                free_pages = int(line.split(":")[1].strip().rstrip("."))
+                return free_pages * page_size
+        # vm_stat parsed but "Pages free" line absent — fall back to 20% of total
+        total = int(subprocess.check_output(["sysctl", "-n", "hw.memsize"]))
+        return int(total * 0.20)
+    except (subprocess.CalledProcessError, ValueError, OSError):
+        print(
+            f"  WARNING: RAM detection failed. "
+            f"Using fixed threshold of {_FALLBACK_RAM_BYTES // (1024 ** 2)} MB.",
+            file=sys.stderr,
+        )
+        return _FALLBACK_RAM_BYTES
 
 
 def format_bytes(n):
